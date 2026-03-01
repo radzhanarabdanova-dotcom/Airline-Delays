@@ -1,0 +1,76 @@
+---
+title: "Week5A"
+author: "Radzhana Rabdanova"
+date: "2026-02-26"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#LOAD LIBRARY
+library(tidyverse) 
+library(readxl)
+# 1. LOAD DATA
+# Make sure to load your file first
+Air <- read_excel("C:\\Users\\radzh\\OneDrive\\Desktop\\data 607\\week5a\\airlines.xlsx")
+
+# 2. CLEANING AND TIDYING
+# First, we pivot to long format to handle the cities
+Air_long <- Air %>% 
+  pivot_longer(
+    cols = c("Los Angeles", "Phoenix", "San Diego", "San Francisco", "Seattle"),
+    names_to = "city",
+    values_to = "flight_count"
+  ) %>%
+  rename(airline = 1, status = 2) %>%  # Rename columns for clarity
+  fill(airline)                        # Fill the NA airline names downwards
+
+# 3. RESHAPE FOR ANALYSIS
+# We use pivot_wider to create separate columns for 'on time' and 'delayed'
+# This allows us to perform math on them in the next step
+Air_wide <- Air_long %>%
+  pivot_wider(names_from = status, values_from = flight_count)
+
+# 4. CALCULATE PERCENTAGES
+# Now 'delayed' and 'on time' are actual columns we can use
+Air_final <- Air_wide %>%
+  mutate(
+    total = delayed + `on time`,
+    pct_delay = (delayed / total) * 100
+  )
+
+# 5. OVERALL COMPARISON
+# Summarize the data for each airline regardless of city
+Air_overall <- Air_final %>%
+  group_by(airline) %>%
+  summarise(
+    total_delayed = sum(delayed),
+    total_flights = sum(total)
+  ) %>%
+  mutate(overall_pct = (total_delayed / total_flights) * 100)
+
+# Display results
+print(Air_final)
+print(Air_overall)
+
+# Create a bar chart comparing delay percentages by city
+ggplot(Air_final, aes(x = city, y = pct_delay, fill = airline)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Delay Percentage by City",
+       y = "Percentage of Delays",
+       x = "City") +
+  theme_minimal()
+
+# Create a bar chart for the overall average
+ggplot(Air_overall, aes(x = airline, y = overall_pct, fill = airline)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Overall Delay Percentage",
+       y = "Total Percentage of Delays",
+       x = "Airline") +
+  theme_minimal()
+
+
+```
